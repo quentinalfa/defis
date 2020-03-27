@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>logisim</title>
+	<style type="text/css">
+		table, td, tr {
+			text-align: center;
+			border: 1px double black;
+		}
+		.operation, .b_operation {
+			background-color: purple;
+			height: 19pt;
+		}
+		#cellule, .b_cellule {
+			background-color: pink;
+		}
+		.b_reset {
+			background-color: red;
+			width: 100%;
+		}
+		#construct {
+			height: 175pt;
+			width: 100%;
+			overflow: auto;
+			border: 1px double black;
+		}
+		.options {
+			display : inline-block;
+			vertical-align: top;
+		}
+		table{
+			height: 47pt;
+		}
+	</style>
+</head>
+<body>
+	<div id='construct'></div>
+	<br />
+	<div class="options">
+		<table>
+			<tr class='operation'>
+				<td><input type="button" class='b_operation' name='negate' value='~' onclick='f_operation("~")'></td>
+				<td><input type="button" class='b_operation' name='or' value='\/' onclick='f_operation("\\/")'></td>
+				<td><input type="button" class='b_operation' name='and' value='/\' onclick='f_operation("/\\")'></td>
+				<td><input type="button" class='b_operation' name='xor' value='⊕' onclick='f_operation("⊕")'></td>
+			</tr>
+			<tr class="operation">
+				<td colspan="2"><input type="button" class='b_reset' name='supp' value='supp' onclick='f_operation("supp")'></td>
+				<td colspan="2"><input type="button" class='b_reset' name='reset' value='reset' onclick='reset(3)'></td>
+			</tr>
+		</table>
+	</div>
+	<div class="options">
+		<table>
+			<tr class='operation'>
+				<td><input type="range" id='taille_b' min="1" max="10"></td>
+			</tr>
+			<tr class='operation'>
+				<td><input type="button" class='b_valider' name='valider' value='VALIDER' style="width: 100%; height: 100%; background-color: green;" onclick='reset(parseInt(document.getElementById("taille_b").value))'></td>
+			</tr>
+		</table>
+	</div>
+</body>
+</html>
+<script type="text/javascript">
+
+	var TAB;
+	var operation = false;
+	var Cellules = [];
+
+	//--------------------------------------------------------------------------------------
+
+	function min(a,b) {
+		return (a>=b? b : a)
+	}
+
+	function name(tab1, n1, tab2 = false, n2 = false) {
+		console.log(tab2[0]);
+		return [tab2 ?((tab1[0].length == 1 ? tab1[0] : 'C'+n1) +operation+ (tab2[0].length == 1 ? tab2[0] : 'C'+n2)):(tab1[0].length == 1 ? (operation+tab1[0]) : (operation+'C'+n1))]
+	}
+
+	function parcourir_tab(result,tab,fonction) {
+		var result = result;
+		for (var i = 1; i < tab.length; i++) {
+			result.push(fonction(i))
+		}
+		return result
+	}
+	
+	//---------------------------------------------------------------------------------------
+
+	function negate(tab,n) {
+		return parcourir_tab(name(tab, n), 			   tab, i => 1-tab[i])
+	}
+
+	function or(tab1, tab2, n1, n2) {
+		return parcourir_tab(name(tab1, n1, tab2, n2), tab1, i => min(tab1[i]+tab2[i],1))
+	}
+
+	function xor(tab1, tab2, n1, n2) {
+		return parcourir_tab(name(tab1, n1, tab2, n2), tab1, i => tab1[i]+tab2[i] == 2? 0 : tab1[i]+tab2[i])
+
+	}
+
+	function and(tab1, tab2, n1, n2) {
+		return parcourir_tab(name(tab1, n1, tab2, n2), tab1, i => tab1[i]*tab2[i])
+
+	}
+
+	//----------------------------------------------------------------------------------------
+
+	function f_operation(op) {
+		operation = op;
+		console.log(operation);
+	}
+
+	function f_cellule(nb) {
+		Cellules.push(nb)
+		if (operation) {
+			if (operation == '~') {
+
+				var result = negate( TAB[nb], nb );
+				remplir_tab( [result] , TAB.length);
+				TAB.push(result);
+
+				Cellules = []
+				operation = false;
+
+			}else if (operation == 'supp'){
+
+				TAB.splice(nb,1)
+				document.getElementById('construct').innerHTML = construct_tab(TAB[0].length);
+				remplir_tab(TAB);
+
+			} else {
+				if (Cellules.length == 2) {
+
+					var result;
+
+					if (operation == '\\/') {
+
+						result = or( TAB[Cellules[0]], TAB[Cellules[1]], Cellules[0], Cellules[1] );
+
+					}else if (operation == '/\\'){
+
+						result = and( TAB[Cellules[0]], TAB[Cellules[1]], Cellules[0], Cellules[1] );
+
+					}else if (operation == '⊕'){
+
+						result = xor( TAB[Cellules[0]], TAB[Cellules[1]], Cellules[0], Cellules[1] );
+						
+
+					}
+
+					remplir_tab( [result] , TAB.length);
+					TAB.push(result);
+
+					Cellules = []
+					operation = false;
+				}
+			}
+		}
+	}
+
+	//----------------------------------------------------------------------------------------------
+
+	function construct_tab(nb_ligne) {
+		var result = '<table>';
+		for (var tr = -2; tr < nb_ligne -1; tr++) {
+			if (tr < 0) {
+				if (tr == -2) { result += '<tr id="cellule"></tr>';}
+
+				else 		  {	result += '<tr id="name"></tr>';}
+
+			}else 			  { result += '<tr id="c'+tr+'"></tr>'; }
+		}
+		result += '</table>';
+		return result
+	}
+
+	function remplir_tab(tab,n=0) {
+		for (var colonne = 0; colonne < tab.length ; colonne++) {
+			for (var ligne = -2; ligne < tab[0].length -1; ligne++ ) {
+				if (ligne < 0)
+					if (ligne == -2) { document.getElementById('cellule').innerHTML += '<td><input type="button" class="b_cellule" value="C'+String(colonne+n)+'" onclick="f_cellule('+(colonne+n)+')"></td>';}
+
+					else { document.getElementById('name').innerHTML += '<td>'+tab[colonne][ligne+1]+'</td>';}
+				else { document.getElementById('c'+String(ligne)).innerHTML += '<td>'+tab[colonne][ligne+1]+'</td>';}
+			}
+		}
+	}
+
+
+	function binnary_tab(n) {
+
+		var newTab = []
+
+		for (var row = 1; row < n +1; row++) {
+
+			console.log(row);
+
+			var newRow = [String.fromCharCode(96+row).toUpperCase()]
+
+			for (var i = 0; i < 2**(n-1)/2**(n-row); i++) {
+
+				for (var nb = 0; nb < 2; nb++){
+					for (var bit = 0; bit < 2**(n-row); bit++){
+						newRow.push(nb);
+					}
+				}
+
+			}
+
+			newTab.push(newRow);
+
+		}
+
+		return newTab
+	}
+
+	//------------------------------------------------------------------------------------------------
+
+	function reset(n) {
+		TAB = binnary_tab(n);
+		document.getElementById('construct').innerHTML = construct_tab(TAB[0].length);
+		remplir_tab(TAB);
+	}
+
+	reset(3)
+
+</script>
